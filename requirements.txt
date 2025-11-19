@@ -1,0 +1,11 @@
+mss
+pygetwindow
+pytesseract
+Pillow
+pandas
+scikit-learn
+joblib
+streamlit
+plotly
+tensorflow
+opencv-python
