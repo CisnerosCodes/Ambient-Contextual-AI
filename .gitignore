@@ -1,0 +1,21 @@
+# Python Environment & Cache
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Project Data (Privacy & Local State)
+screenshots/
+activity.db
+anchor.json
+autoencoder.h5
+classified_activity.csv
+anomaly_results.csv
+
+# Logs and Temporary Scripts
+*.log
+test_ollama.py
+
+# IDE Settings
+.vscode/
+.idea/

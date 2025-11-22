@@ -1,79 +1,76 @@
-# Ambient Contextual AI
+# Ambient Contextual AI: Zero-Shot Latent Space Analysis System
 
-This project is a personal productivity assistant that runs locally on your machine. The AI "ambiently" observes your on-screen activity to build a rich contextual understanding of your work patterns. It then generates a daily report that provides actionable insights into your productivity, focus, and routines, helping you identify areas for improvement.
+## Executive Summary
+This project implements an intelligent, automated system for digitizing and analyzing user workflow context in real-time. By leveraging state-of-the-art Computer Vision (CV) and Natural Language Processing (NLP) techniques, the system transforms raw visual data into high-dimensional vector embeddings. This allows for "Zero-Shot" classification and analysis—meaning the system can quantify focus and generate semantic narratives without requiring task-specific model training.
 
-## Features
+The solution demonstrates the application of novel Deep Learning architectures (CLIP, Large Language Models) to create a decision support tool that senses, thinks, and acts to provide actionable insights into human-computer interaction.
 
-*   **Background Activity Sensing:** A script runs in the background, capturing screenshots, active window titles, and application names.
-*   **Rule-Based Classification:** Activities are automatically categorized into tags like "Coding", "Email", and "Entertainment".
-*   **Computer Vision Anomaly Detection:** A convolutional autoencoder is trained on your screenshots to learn your "normal" visual routines. It can then detect and flag anomalous activities based on visual deviation.
-*   **Interactive Dashboard:** A web-based dashboard built with Streamlit visualizes your daily productivity, including a breakdown of time spent per activity and a timeline of your day.
-*   **Anomaly Report:** The dashboard displays the top 5 most anomalous screenshots from the day, allowing you to review moments that didn't fit your usual patterns.
+## Technical Architecture
 
-## Tech Stack
+The system operates on a modular architecture designed for local execution, ensuring data privacy and low latency.
 
-*   **Language:** Python
-*   **Data Collection:** `mss`, `py-get-active-window`
-*   **Database:** SQLite
-*   **Machine Learning:** TensorFlow/Keras, Scikit-learn
-*   **Dashboard:** Streamlit, Plotly
-*   **Image Processing:** OpenCV, Pillow
-*   **OCR:** Tesseract (optional, as the core anomaly detection is visual)
+### 1. Visual Semantic Embedding Engine (Computer Vision)
+*   **Technology**: `sentence-transformers` (CLIP: Contrastive Language-Image Pre-training).
+*   **Methodology**: The system captures high-frequency visual data (screenshots) and projects them into a 512-dimensional vector space.
+*   **Mathematical Foundation**: Utilizes **Linear Algebra** and **Cosine Similarity** statistics to measure the angular distance between the current state vector and a reference "Anchor" vector (Ideal Work State). This provides a continuous, quantitative metric for "Focus" ($0.0$ to $1.0$) rather than discrete binary classification.
 
-## How to Run
+### 2. Automated Narrative Generation (Generative AI)
+*   **Technology**: `Ollama` (running local LLMs like Llama 3 or Gemma).
+*   **Methodology**: An Optical Character Recognition (OCR) pipeline extracts textual data from the visual feed. This unstructured text is processed by a local Large Language Model to synthesize concise, human-readable narratives of hourly activity.
+*   **Objective**: To transform raw sensor data into semantic context ("What was the user working on?").
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/CisnerosCodes/Ambient-Contextual-AI.git
-cd Ambient-Contextual-AI
-```
+### 3. Real-Time Intelligence Dashboard
+*   **Technology**: `Streamlit`, `Plotly`, `SQLite`.
+*   **Features**:
+    *   **Focus Wave**: A temporal visualization of the user's cognitive load and focus consistency.
+    *   **Semantic Search**: Enables natural language querying of the visual history (e.g., "Show me when I was coding Python") by mapping text queries into the same latent vector space as the images.
 
-### 2. Install Dependencies
-It is recommended to use a virtual environment.
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
-```
-Install the required Python packages:
-```bash
-pip install -r requirements.txt
-```
+## Tech Stack & Requirements
 
-### 3. Install Tesseract OCR (Optional)
-For Optical Character Recognition (OCR) from screenshots, you need to install Google's Tesseract engine.
-*   **Windows:** Download and run the installer from [here](https://github.com/UB-Mannheim/tesseract/wiki).
-*   After installation, you **must** update the path to the Tesseract executable inside `sensor.py`. The default is `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+*   **Core Language**: Python 3.12+
+*   **Computer Vision / ML**: `sentence-transformers` (CLIP-ViT-B-32), `Pillow`
+*   **Generative AI**: `Ollama` (Local Inference)
+*   **OCR Engine**: Tesseract 5.0
+*   **Data Storage**: SQLite (Relational + Vector storage)
+*   **Visualization**: Streamlit, Plotly Express
 
-### 4. Run the Application
-The application runs in three main stages:
+## Installation & Usage
 
-**Stage 1: Collect Data**
-Run the sensor to start collecting data. Let it run in the background while you use your computer. The more data you collect, the better the model will be.
-```bash
-python sensor.py
-```
-When you have enough data, stop the script with `Ctrl+C`.
+### Prerequisites
+*   Python 3.10+
+*   [Ollama](https://ollama.com/) (for local LLM inference)
+*   [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) (for text extraction)
 
-**Stage 2: Train the Anomaly Detection Model**
-Run the trainer script. This will process all your collected screenshots and train the autoencoder model. This may take a long time.
-```bash
-python autoencoder_trainer.py
-```
+### Setup
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/CisnerosCodes/Ambient-Contextual-AI.git
+    ```
+2.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **Initialize AI Models**:
+    ```bash
+    ollama pull llama3
+    ```
 
-**Stage 3: View the Dashboard**
-Once the model is trained, you can view the dashboard.
-```bash
-streamlit run dashboard.py
-```
-This will open the dashboard in your web browser.
+### Operation
+1.  **Initialize Sensor (Background Process)**:
+    Starts the data collection and embedding pipeline.
+    ```bash
+    python sensor.py
+    ```
+2.  **Launch Dashboard (Decision Support Interface)**:
+    Visualizes the analyzed data.
+    ```bash
+    streamlit run dashboard.py
+    ```
 
-## File Structure
+## Research & Development Objectives
+*   **Objective 1**: Validate the efficacy of CLIP embeddings for unsupervised activity recognition.
+*   **Objective 2**: Develop a privacy-preserving "Ambient Intelligence" that operates entirely offline.
+*   **Objective 3**: Bridge the gap between raw pixel data and high-level semantic understanding using multimodal models.
 
-*   `database.py`: Sets up the initial SQLite database.
-*   `sensor.py`: The background script for collecting screenshots and metadata.
-*   `classifier.py`: A script for rule-based activity classification (functionality is now integrated into the dashboard).
-*   `autoencoder_trainer.py`: The script to train the computer vision anomaly detection model.
-*   `dashboard.py`: The main Streamlit application for visualizing data and anomalies.
-*   `activity.db`: The SQLite database where all data is stored.
-*   `autoencoder.h5`: The trained anomaly detection model.
-*   `screenshots/`: The directory where all captured screenshots are saved.
+---
+*Developed by Adrian Cisneros for R&D in Computer Vision and Intelligent Systems.*

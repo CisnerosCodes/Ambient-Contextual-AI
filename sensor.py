@@ -1,11 +1,13 @@
 import sqlite3
 import time
 import os
+import json
 from datetime import datetime
 import mss
 import pygetwindow as gw
 import pytesseract
 from PIL import Image
+from sentence_transformers import SentenceTransformer
 
 # --- Configuration ---
 DB_FILE = "activity.db"
@@ -13,10 +15,16 @@ SCREENSHOTS_DIR = "screenshots"
 CAPTURE_INTERVAL = 10  # seconds
 
 # --- Tesseract OCR Configuration ---
-# IMPORTANT: You need to install Tesseract OCR on your system and provide the path to the executable.
-# Download and install from: https://github.com/UB-Mannheim/tesseract/wiki
-# After installation, update the path below to your Tesseract executable.
-pytesseract.pytesseract.tesseract_cmd = r'C:\ Program Files\Tesseract-OCR\tesseract.exe' # Example path for Windows
+# IMPORTANT: You need to install Tesseract OCR on your system.
+# Download from: https://github.com/UB-Mannheim/tesseract/wiki
+# Default Windows installation path:
+tesseract_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+if os.path.exists(tesseract_path):
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
+else:
+    # Fallback: Assume it's in the system PATH
+    pytesseract.pytesseract.tesseract_cmd = 'tesseract'
 
 def create_database_connection(db_file):
     """Create a database connection to the SQLite database."""
@@ -31,10 +39,10 @@ def insert_log(conn, data):
     """
     Log a new activity record to the database.
     :param conn: Connection object
-    :param data: A tuple containing (active_app_name, active_window_title, screenshot_path, ocr_text)
+    :param data: A tuple containing (active_app_name, active_window_title, screenshot_path, ocr_text, embedding_json)
     """
-    sql = ''' INSERT INTO logs(active_app_name, active_window_title, screenshot_path, ocr_text)
-              VALUES(?,?,?,?) '''
+    sql = ''' INSERT INTO logs(active_app_name, active_window_title, screenshot_path, ocr_text, embedding_json)
+              VALUES(?,?,?,?,?) '''
     cur = conn.cursor()
     cur.execute(sql, data)
     conn.commit()
@@ -86,6 +94,11 @@ def main():
     # Ensure screenshots directory exists
     os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
+    # Initialize Embedding Model
+    print("Loading Embedding Model (CLIP)...")
+    model = SentenceTransformer('clip-ViT-B-32')
+    print("Model loaded.")
+
     db_conn = create_database_connection(DB_FILE)
     if not db_conn:
         print("Error: Could not connect to the database. Exiting.")
@@ -107,8 +120,13 @@ def main():
             ocr_text = perform_ocr(screenshot_path)
             print(f"OCR Text (first 50 chars): {ocr_text[:50].strip()}...")
 
-            # 4. Save to Database
-            log_data = (app_name, window_title, screenshot_path, ocr_text)
+            # 4. Generate Embedding
+            image = Image.open(screenshot_path)
+            embedding = model.encode(image)
+            embedding_json = json.dumps(embedding.tolist())
+
+            # 5. Save to Database
+            log_data = (app_name, window_title, screenshot_path, ocr_text, embedding_json)
             insert_log(db_conn, log_data)
             print("Activity logged to database.")
 

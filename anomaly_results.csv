@@ -1,5 +1,0 @@
-id,timestamp,active_app_name,active_window_title,screenshot_path,ocr_text,category,hour_of_day,day_of_week,is_anomaly
-1,2025-11-18 01:29:43,sensor.py - Ambient Contextual AI - Visual Studio Code,sensor.py - Ambient Contextual AI - Visual Studio Code,screenshots\2025-11-17\19-29-43.png,,Coding,1,1,1
-2,2025-11-18 01:29:54,sensor.py - Ambient Contextual AI - Visual Studio Code,sensor.py - Ambient Contextual AI - Visual Studio Code,screenshots\2025-11-17\19-29-53.png,,Coding,1,1,1
-3,2025-11-18 01:30:04,sensor.py - Ambient Contextual AI - Visual Studio Code,sensor.py - Ambient Contextual AI - Visual Studio Code,screenshots\2025-11-17\19-30-04.png,,Coding,1,1,1
-4,2025-11-18 01:30:14,sensor.py - Ambient Contextual AI - Visual Studio Code,sensor.py - Ambient Contextual AI - Visual Studio Code,screenshots\2025-11-17\19-30-14.png,,Coding,1,1,1

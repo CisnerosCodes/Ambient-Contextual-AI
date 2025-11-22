@@ -1,138 +1,116 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-from datetime import date
-import plotly.express as px
+import json
 import os
-import cv2
 import numpy as np
-import tensorflow as tf
+from datetime import datetime, date
+import plotly.express as px
+from sentence_transformers import SentenceTransformer
+import analysis
 
 # --- Configuration ---
 DB_FILE = "activity.db"
-MODEL_PATH = "autoencoder.h5"
-CAPTURE_INTERVAL_SECONDS = 10
-IMAGE_HEIGHT = 128
-IMAGE_WIDTH = 128
 
-# --- Database and Data Loading ---
-def load_data_for_date(selected_date):
-    """Query the database for all logs on a specific date."""
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        query = "SELECT * FROM logs WHERE DATE(timestamp) = ?"
-        df = pd.read_sql_query(query, conn, params=(selected_date.strftime('%Y-%m-%d'),))
-        conn.close()
-        return df
-    except Exception as e:
-        st.error(f"An error occurred while loading data: {e}")
-        return pd.DataFrame()
+# --- Setup ---
+st.set_page_config(page_title="Ambient Contextual AI", layout="wide")
 
-# --- Classification ---
-def classify_activity(row):
-    """Classifies a single activity record based on predefined rules."""
-    app_name = row['active_app_name'].lower()
-    window_title = row['active_window_title'].lower()
-    # ocr_text is not used in the current classification but kept for future use
-    # ocr_text = str(row['ocr_text']).lower() if pd.notna(row['ocr_text']) else ""
-    if any(keyword in app_name for keyword in ["code.exe", "visual studio code", "sublime_text"]):
-        return "Coding"
-    if any(keyword in window_title for keyword in ["outlook", "gmail"]):
-        return "Email"
-    if any(keyword in window_title for keyword in ["youtube", "netflix"]):
-        return "Entertainment"
-    return "General"
-
-# --- Anomaly Detection ---
 @st.cache_resource
-def load_model(path):
-    """Load the trained autoencoder model."""
-    if not os.path.exists(path):
-        return None
-    return tf.keras.models.load_model(path)
+def load_embedding_model():
+    return SentenceTransformer('clip-ViT-B-32')
 
-def preprocess_image(path):
-    """Load and preprocess a single image."""
-    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    img = cv2.resize(img, (IMAGE_WIDTH, IMAGE_HEIGHT))
-    img = img.astype('float32') / 255.0
-    return img.reshape(1, IMAGE_HEIGHT, IMAGE_WIDTH, 1)
+def load_data(selected_date):
+    conn = sqlite3.connect(DB_FILE)
+    query = "SELECT * FROM logs WHERE DATE(timestamp) = ?"
+    df = pd.read_sql_query(query, conn, params=(selected_date.strftime('%Y-%m-%d'),))
+    conn.close()
+    return df
 
-def find_top_anomalies(model, df):
-    """Find the top 5 anomalies based on reconstruction error."""
-    errors = []
-    for i, row in df.iterrows():
-        image_path = row['screenshot_path']
-        if not os.path.exists(image_path):
-            errors.append(0)
-            continue
+def load_summaries(selected_date):
+    conn = sqlite3.connect(DB_FILE)
+    query = "SELECT * FROM summaries WHERE DATE(timestamp) = ?"
+    df = pd.read_sql_query(query, conn, params=(selected_date.strftime('%Y-%m-%d'),))
+    conn.close()
+    return df
+
+# --- Sidebar ---
+st.sidebar.title("Controls")
+selected_date = st.sidebar.date_input("Select Date", date.today())
+
+if st.sidebar.button("Set Last Screenshot as Anchor"):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT embedding_json FROM logs ORDER BY id DESC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    if row and row[0]:
+        embedding = json.loads(row[0])
+        analysis.set_anchor_embedding(embedding)
+        st.sidebar.success("Anchor set to last activity!")
+    else:
+        st.sidebar.error("No logs found to set anchor.")
+
+if st.sidebar.button("Generate Summary Now"):
+    with st.spinner("Generating summary..."):
+        summary = analysis.generate_hourly_summary()
+        st.sidebar.info(summary)
+
+# --- Main Content ---
+st.title("Ambient Contextual AI Dashboard")
+
+# 1. Focus Wave
+st.header("🌊 Focus Wave")
+df = load_data(selected_date)
+anchor_embedding = analysis.get_anchor_embedding()
+
+if not df.empty and anchor_embedding:
+    # Calculate Focus Scores
+    # Handle potential None values in embedding_json
+    df['embedding'] = df['embedding_json'].apply(lambda x: json.loads(x) if x else None)
+    # Filter out rows where embedding is None
+    df = df.dropna(subset=['embedding'])
+    
+    if not df.empty:
+        df['focus_score'] = df['embedding'].apply(lambda x: analysis.calculate_focus_score(x, anchor_embedding))
         
-        original_img = preprocess_image(image_path)
-        reconstructed_img = model.predict(original_img, verbose=0)
-        mse = np.mean(np.square(original_img - reconstructed_img))
-        errors.append(mse)
-    
-    df['reconstruction_error'] = errors
-    return df.nlargest(5, 'reconstruction_error')
+        fig = px.line(df, x='timestamp', y='focus_score', title='Focus Score Over Time', range_y=[0, 1])
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No valid embeddings found for this date.")
+elif df.empty:
+    st.info("No data for selected date.")
+else:
+    st.warning("Please set an Anchor State (Ideal Work State) in the sidebar to see Focus Scores.")
 
-# --- Main Dashboard ---
-def main():
-    st.set_page_config(layout="wide")
-    st.title("Ambient Contextual AI Productivity Dashboard")
+# 2. Narrative
+st.header("📖 Daily Narrative")
+summaries_df = load_summaries(selected_date)
+if not summaries_df.empty:
+    for index, row in summaries_df.iterrows():
+        st.markdown(f"**{row['timestamp']}**: {row['summary_text']}")
+else:
+    st.info("No summaries generated yet.")
 
-    autoencoder = load_model(MODEL_PATH)
+# 3. Semantic Search
+st.header("🔍 Semantic Search")
+search_query = st.text_input("Search your day (e.g., 'Reading news', 'Coding python')")
+
+if search_query and not df.empty:
+    model = load_embedding_model()
+    query_embedding = model.encode(search_query)
     
-    st_date = st.date_input("Select a date to review", date.today())
-    
-    if st_date:
-        st.header(f"Activity for {st_date.strftime('%Y-%m-%d')}")
-        daily_data = load_data_for_date(st_date)
+    # Ensure we have embeddings
+    if 'embedding' not in df.columns:
+         df['embedding'] = df['embedding_json'].apply(lambda x: json.loads(x) if x else None)
+         df = df.dropna(subset=['embedding'])
+
+    if not df.empty:
+        df['similarity'] = df['embedding'].apply(lambda x: analysis.calculate_focus_score(x, query_embedding))
+        results = df.sort_values(by='similarity', ascending=False).head(5)
         
-        if not daily_data.empty:
-            daily_data['category'] = daily_data.apply(classify_activity, axis=1)
-            daily_data['timestamp'] = pd.to_datetime(daily_data['timestamp'])
-
-            # --- Visualizations ---
-            st.subheader("Productivity Breakdown")
-            col1, col2 = st.columns(2)
-            with col1:
-                time_spent = daily_data['category'].value_counts() * CAPTURE_INTERVAL_SECONDS / 60
-                fig_pie = px.pie(time_spent.reset_index(), values='count', names='category', title="Time Spent per Activity (Minutes)")
-                st.plotly_chart(fig_pie, use_container_width=True)
-            with col2:
-                # Timeline Chart - FIX
-                timeline_df = daily_data.set_index('timestamp').resample('10T')['category'].apply(lambda x: x.mode()[0] if not x.empty else None).dropna().reset_index()
-                timeline_df.rename(columns={'timestamp': 'time_block'}, inplace=True)
-
-                fig_timeline = px.bar(timeline_df, x='time_block', y='category', color='category',
-                                      title="Activity Timeline (10-Minute Intervals)",
-                                      labels={'time_block': 'Time', 'category': 'Activity'})
-                fig_timeline.update_layout(yaxis_title=None)
-                st.plotly_chart(fig_timeline, use_container_width=True)
-
-            # --- Anomaly Report ---
-            if autoencoder is not None:
-                st.subheader("Anomaly Report")
-                with st.spinner("Analyzing screenshots for anomalies..."):
-                    top_anomalies = find_top_anomalies(autoencoder, daily_data.copy())
-                
-                st.write("These are the moments from your day that least match your typical activity patterns.")
-                for i, row in top_anomalies.iterrows():
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        st.image(row['screenshot_path'], caption=f"Timestamp: {row['timestamp']}")
-                    with col2:
-                        st.warning(f"**High Anomaly Detected at {row['timestamp'].strftime('%H:%M:%S')}**")
-                        st.write(f"**Activity:** {row['active_window_title']}")
-                        st.write(f"**Category:** {row['category']}")
-                        st.metric("Reconstruction Error (MSE)", f"{row['reconstruction_error']:.6f}")
-            else:
-                st.warning("`autoencoder.h5` not found. Please train the model first (`autoencoder_trainer.py`).")
-
-            with st.expander("View Raw Data"):
-                st.dataframe(daily_data)
-        else:
-            st.warning("No activity was logged on this date.")
-
-if __name__ == "__main__":
-    main()
+        for index, row in results.iterrows():
+            st.subheader(f"{row['timestamp']} - Similarity: {row['similarity']:.2f}")
+            st.write(f"App: {row['active_app_name']} | Window: {row['active_window_title']}")
+            if row['screenshot_path'] and os.path.exists(row['screenshot_path']):
+                st.image(row['screenshot_path'], width=300)
+            st.write("---")
