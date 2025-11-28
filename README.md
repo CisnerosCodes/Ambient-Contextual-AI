@@ -1,76 +1,159 @@
-# Ambient Contextual AI: Zero-Shot Latent Space Analysis System
+# Ambient Contextual AI
 
-## Executive Summary
-This project implements an intelligent, automated system for digitizing and analyzing user workflow context in real-time. By leveraging state-of-the-art Computer Vision (CV) and Natural Language Processing (NLP) techniques, the system transforms raw visual data into high-dimensional vector embeddings. This allows for "Zero-Shot" classification and analysis—meaning the system can quantify focus and generate semantic narratives without requiring task-specific model training.
+> **Zero-Shot Latent Space Analysis for Real-Time Productivity Intelligence**
 
-The solution demonstrates the application of novel Deep Learning architectures (CLIP, Large Language Models) to create a decision support tool that senses, thinks, and acts to provide actionable insights into human-computer interaction.
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CLIP](https://img.shields.io/badge/Model-CLIP--ViT--B--32-orange.svg)](https://openai.com/research/clip)
+[![Ollama](https://img.shields.io/badge/LLM-Ollama-purple.svg)](https://ollama.com)
 
-## Technical Architecture
+<p align="center">
+  <img src="assets/dashboard_preview.png" alt="Dashboard Preview" width="700">
+</p>
+
+## 📋 Executive Summary
+
+This project implements an intelligent, automated system for digitizing and analyzing user workflow context in real-time. By leveraging state-of-the-art **Computer Vision (CV)** and **Natural Language Processing (NLP)** techniques, the system transforms raw visual data into high-dimensional vector embeddings.
+
+This allows for **"Zero-Shot" classification and analysis**—meaning the system can quantify focus and generate semantic narratives **without requiring task-specific model training**.
+
+### ✨ Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🎯 **Focus Quantification** | Measures productivity using cosine similarity in 512-dim latent space |
+| 📖 **Automated Narratives** | Local LLM generates hourly activity summaries |
+| 🔍 **Semantic Search** | Query your visual history with natural language |
+| 🔒 **100% Offline** | All processing runs locally—zero cloud dependencies |
+
+---
+
+## 🏗️ Technical Architecture
 
 The system operates on a modular architecture designed for local execution, ensuring data privacy and low latency.
 
-### 1. Visual Semantic Embedding Engine (Computer Vision)
-*   **Technology**: `sentence-transformers` (CLIP: Contrastive Language-Image Pre-training).
-*   **Methodology**: The system captures high-frequency visual data (screenshots) and projects them into a 512-dimensional vector space.
-*   **Mathematical Foundation**: Utilizes **Linear Algebra** and **Cosine Similarity** statistics to measure the angular distance between the current state vector and a reference "Anchor" vector (Ideal Work State). This provides a continuous, quantitative metric for "Focus" ($0.0$ to $1.0$) rather than discrete binary classification.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    AMBIENT CONTEXTUAL AI                        │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │   SENSOR     │───▶│   ANALYSIS   │───▶│  DASHBOARD   │      │
+│  │  (sensor.py) │    │ (analysis.py)│    │(dashboard.py)│      │
+│  └──────────────┘    └──────────────┘    └──────────────┘      │
+│         │                   │                   │               │
+│         ▼                   ▼                   ▼               │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │  CLIP ViT    │    │   Ollama     │    │  Streamlit   │      │
+│  │  Embeddings  │    │   LLM        │    │  + Plotly    │      │
+│  └──────────────┘    └──────────────┘    └──────────────┘      │
+│                              │                                  │
+│                              ▼                                  │
+│                    ┌──────────────────┐                        │
+│                    │   SQLite + JSON  │                        │
+│                    │  (Vector Store)  │                        │
+│                    └──────────────────┘                        │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### 2. Automated Narrative Generation (Generative AI)
-*   **Technology**: `Ollama` (running local LLMs like Llama 3 or Gemma).
-*   **Methodology**: An Optical Character Recognition (OCR) pipeline extracts textual data from the visual feed. This unstructured text is processed by a local Large Language Model to synthesize concise, human-readable narratives of hourly activity.
-*   **Objective**: To transform raw sensor data into semantic context ("What was the user working on?").
+### 1. 👁️ Visual Semantic Embedding Engine (Computer Vision)
 
-### 3. Real-Time Intelligence Dashboard
-*   **Technology**: `Streamlit`, `Plotly`, `SQLite`.
-*   **Features**:
-    *   **Focus Wave**: A temporal visualization of the user's cognitive load and focus consistency.
-    *   **Semantic Search**: Enables natural language querying of the visual history (e.g., "Show me when I was coding Python") by mapping text queries into the same latent vector space as the images.
+| Component | Details |
+|-----------|--------|
+| **Technology** | `sentence-transformers` (CLIP: Contrastive Language-Image Pre-training) |
+| **Vector Dimension** | 512-dimensional latent space |
+| **Similarity Metric** | Cosine Similarity for focus quantification (0.0 → 1.0) |
 
-## Tech Stack & Requirements
+The system captures visual data and projects it into a high-dimensional vector space, enabling mathematical comparison between states.
 
-*   **Core Language**: Python 3.12+
-*   **Computer Vision / ML**: `sentence-transformers` (CLIP-ViT-B-32), `Pillow`
-*   **Generative AI**: `Ollama` (Local Inference)
-*   **OCR Engine**: Tesseract 5.0
-*   **Data Storage**: SQLite (Relational + Vector storage)
-*   **Visualization**: Streamlit, Plotly Express
+### 2. 🤖 Automated Narrative Generation (Generative AI)
 
-## Installation & Usage
+| Component | Details |
+|-----------|--------|
+| **Technology** | `Ollama` (Llama 3 / Gemma - Local Inference) |
+| **Input** | OCR-extracted text from screenshots |
+| **Output** | Human-readable hourly activity summaries |
 
-### Prerequisites
-*   Python 3.10+
-*   [Ollama](https://ollama.com/) (for local LLM inference)
-*   [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) (for text extraction)
+Transforms raw sensor data into semantic context: *"What was the user working on?"*
 
-### Setup
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/CisnerosCodes/Ambient-Contextual-AI.git
-    ```
-2.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Initialize AI Models**:
-    ```bash
-    ollama pull llama3
-    ```
+### 3. 📊 Real-Time Intelligence Dashboard
 
-### Operation
-1.  **Initialize Sensor (Background Process)**:
-    Starts the data collection and embedding pipeline.
-    ```bash
-    python sensor.py
-    ```
-2.  **Launch Dashboard (Decision Support Interface)**:
-    Visualizes the analyzed data.
-    ```bash
-    streamlit run dashboard.py
-    ```
-
-## Research & Development Objectives
-*   **Objective 1**: Validate the efficacy of CLIP embeddings for unsupervised activity recognition.
-*   **Objective 2**: Develop a privacy-preserving "Ambient Intelligence" that operates entirely offline.
-*   **Objective 3**: Bridge the gap between raw pixel data and high-level semantic understanding using multimodal models.
+| Feature | Description |
+|---------|-------------|
+| **Focus Wave** | Temporal visualization of cognitive load and focus consistency |
+| **Semantic Search** | Natural language querying of visual history |
+| **Daily Narrative** | LLM-generated summaries of work sessions |
 
 ---
-*Developed by Adrian Cisneros for R&D in Computer Vision and Intelligent Systems.*
+
+## 🛠️ Tech Stack
+
+| Category | Technologies |
+|----------|-------------|
+| **Language** | Python 3.10+ |
+| **Computer Vision** | CLIP-ViT-B-32, Pillow, OpenCV |
+| **Generative AI** | Ollama (Llama 3 / Gemma) |
+| **OCR** | Tesseract 5.0 |
+| **Database** | SQLite + JSON (Vector Storage) |
+| **Frontend** | Streamlit, Plotly Express |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- [x] Python 3.10+
+- [x] [Ollama](https://ollama.com/) (for local LLM inference)
+- [x] [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) (for text extraction)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/CisnerosCodes/Ambient-Contextual-AI.git
+cd Ambient-Contextual-AI
+
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/Mac
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Download LLM model
+ollama pull llama3
+```
+
+### Usage
+
+```bash
+# Terminal 1: Start the sensor (runs in background)
+python sensor.py
+
+# Terminal 2: Launch the dashboard
+streamlit run dashboard.py
+```
+
+> 💡 **Tip**: Set your "Anchor" (ideal work state) in the dashboard sidebar to start tracking focus.
+
+---
+
+## 📈 Research & Development Objectives
+
+1. **Zero-Shot Recognition**: Validate CLIP embeddings for unsupervised activity classification
+2. **Privacy-First Design**: 100% offline processing with no cloud dependencies
+3. **Multimodal Understanding**: Bridge raw pixels → semantic meaning using vision-language models
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  <b>Developed by Adrian Cisneros</b><br>
+  <i>R&D in Computer Vision and Intelligent Systems</i>
+</p>
